@@ -11,7 +11,10 @@ app.set("view engine", "ejs");
 
 // index page
 app.get("/", function(req, res) {
-  res.render("pages/index");
+  let templateVars = {
+    //headTitle: "Title"
+  };
+  res.render("pages/index", templateVars);
 });
 
 // about page
@@ -29,7 +32,6 @@ app.get("/urls", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   let templateVars = {
-    headTitle: "URL - TinyApp Example",
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL]
   };

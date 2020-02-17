@@ -1,21 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <%- include('../partials/head') %>
+    <%- include('../partials/_head') %>
   </head>
 
   <body>
-    <div class="card text-center">
-      <div class="card-header"></div>
-      <div class="card-body">
-        <h5 class="card-title">TinyURL for: <%= longURL %></h5>
-        <p class="card-text">Short URL: <a href="/u/<%= shortURL %>"><%= shortURL %></a></p>
+    <%- include('../partials/_header') %>
+    <main>
+      <div class="card text-center">
+        <div class="card-header"></div>
+        <div class="card-body">
+          <h5 class="card-title">TinyURL for: <%= longURL %></h5>
+          <p class="card-text">Short URL: <a href="/u/<%= shortURL %>"><%= shortURL %></a></p>
+        </div>
+        <div class="card-footer text-muted"></div>
       </div>
-      <div class="card-footer text-muted"></div>
-    </div>
+    </main>
 
     <footer>
-      <%- include('../partials/footer') %>
+      <%- include('../partials/_footer') %>
     </footer>
   </body>
 </html>
