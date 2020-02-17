@@ -7,7 +7,17 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+// From: https://stackoverflow.com/a/8084248/6024104
+const generateRandomString = () => {
+  let output = Math.random()
+    .toString(36)
+    .substring(7);
+  return output;
+};
+
 app.set("view engine", "ejs");
+const bodyParser = require("body-parser");
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // index page
 app.get("/", function(req, res) {
@@ -22,12 +32,22 @@ app.get("/about", function(req, res) {
   res.render("pages/about");
 });
 
+app.post("/urls", (req, res) => {
+  console.log(req.body); // Log the POST request body to the console
+  urlDatabase[generateRandomString()] = req.body.longURL;
+  res.send("Ok"); // Respond with 'Ok' (we will replace this)
+});
+
 app.get("/urls", (req, res) => {
   let templateVars = {
     headTitle: "URL's Index",
     urls: urlDatabase
   };
   res.render("pages/urls_index", templateVars);
+});
+
+app.get("/urls/new", (req, res) => {
+  res.render("pages/urls_new");
 });
 
 app.get("/urls/:shortURL", (req, res) => {

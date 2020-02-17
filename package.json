@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/forgehe/tinyapp#readme",
   "dependencies": {
+    "body-parser": "^1.19.0",
     "ejs": "^3.0.1",
     "express": "^4.17.1"
   }
