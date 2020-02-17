@@ -11,18 +11,7 @@ app.set("view engine", "ejs");
 
 // index page
 app.get("/", function(req, res) {
-  let drinks = [
-    { name: "Bloody Mary", drunkness: 3 },
-    { name: "Martini", drunkness: 5 },
-    { name: "Scotch", drunkness: 10 }
-  ];
-  let tagline =
-    "Any code of your own that you haven't looked at for six or more months might as well have been written by someone else.";
-
-  res.render("pages/index", {
-    drinks: drinks,
-    tagline: tagline
-  });
+  res.render("pages/index");
 });
 
 // about page
@@ -31,8 +20,21 @@ app.get("/about", function(req, res) {
 });
 
 app.get("/urls", (req, res) => {
-  let templateVars = { urls: urlDatabase };
+  let templateVars = {
+    headTitle: "URL's Index",
+    urls: urlDatabase
+  };
   res.render("pages/urls_index", templateVars);
+});
+
+app.get("/urls/:shortURL", (req, res) => {
+  let templateVars = {
+    headTitle: "URL - TinyApp Example",
+    shortURL: req.params.shortURL,
+    longURL: urlDatabase[req.params.shortURL]
+  };
+  // console.log(templateVars.longURL);
+  res.render("pages/urls_show", templateVars);
 });
 
 app.get("/urls.json", (req, res) => {
