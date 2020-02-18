@@ -41,6 +41,15 @@ app.post("/urls", (req, res) => {
   // res.send("Ok"); // Respond with 'Ok' (we will replace this)
 });
 
+app.post("/urls/:shortURL/delete", (req, res) => {
+  // delete urlDatabase[:shortURL];
+  console.log(req.params.shortURL);
+  delete urlDatabase[req.params.shortURL];
+  res.redirect("/urls");
+  // res.redirect("pages/urls_show", templateVars);
+  // res.send("Ok"); // Respond with 'Ok' (we will replace this)
+});
+
 app.get("/urls", (req, res) => {
   let templateVars = {
     headTitle: "URL's Index",
