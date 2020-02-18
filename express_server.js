@@ -60,6 +60,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/urls/:shortURL", (req, res) => {
+  console.log(req.params);
   let input = encodeURI(req.body.editURL);
   if (!(input.startsWith("http://") || input.startsWith("https://"))) {
     input = "https://" + input;
