@@ -20,7 +20,7 @@
         <tbody>
           <% for(let url in urls) { %>
           <tr>
-            <td><%= url %></td>
+            <td><a href="/urls/<%= url %>"><%= url %></a></td>
             <td><%= urls[url] %></td>
             <td>
               <button><a href="/urls/<%= url %>">Edit</a></button>

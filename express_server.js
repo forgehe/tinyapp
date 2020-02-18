@@ -34,8 +34,12 @@ app.get("/about", function(req, res) {
 
 app.post("/urls", (req, res) => {
   let shortURL = generateRandomString();
-  urlDatabase[shortURL] = req.body.longURL;
-  console.log(shortURL, req.body);
+  let input = encodeURI(req.body.longURL);
+  if (!(input.startsWith("http://") || input.startsWith("https://"))) {
+    input = "https://" + input;
+  }
+  urlDatabase[shortURL] = input;
+  console.log(shortURL, input);
   res.redirect(`urls/${shortURL}`);
   // res.redirect("pages/urls_show", templateVars);
   // res.send("Ok"); // Respond with 'Ok' (we will replace this)
@@ -81,7 +85,12 @@ app.get("/urls/:shortURL", (req, res) => {
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  res.redirect(urlDatabase[req.params.shortURL]);
+  if (urlDatabase[req.params.shortURL] !== undefined) {
+    res.redirect(urlDatabase[req.params.shortURL]);
+  } else {
+    res.statusCode = 404;
+    res.send("404, shortURL not found.");
+  }
 });
 
 app.get("/urls.json", (req, res) => {
