@@ -18,11 +18,28 @@
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
     </div>
-    <div class="login-form">
-      <form method="POST" action="/login">
-        <input type="text" name="username" placeholder="Enter Username Here" />
-        <button type="submit" value="Submit">Submit</button>
-      </form>
+    <div>
+      <style>
+        .logged-in {
+          display: grid;
+          grid-template-columns: 3fr 1fr;
+        }
+      </style>
+      <% if (username) { %>
+      <div class="logged-in">
+        <h6>Welcome Back <%= username %>!</h6>
+        <form method="POST" action="/logout">
+          <button type="submit" value="logout">Logout</button>
+        </form>
+      </div>
+      <% } else { %>
+      <div class="login-form">
+        <form method="POST" action="/login">
+          <input type="text" name="username" placeholder="Enter Username Here" />
+          <button type="submit" value="Submit">Submit</button>
+        </form>
+      </div>
+      <% } %>
     </div>
   </nav>
 </header>
