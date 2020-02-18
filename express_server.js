@@ -32,6 +32,11 @@ app.get("/about", function(req, res) {
   res.render("pages/about");
 });
 
+app.post("/login", (req, res) => {
+  res.cookie("username", req.body.username);
+  res.redirect("/urls");
+});
+
 app.post("/urls", (req, res) => {
   let shortURL = generateRandomString();
   let input = encodeURI(req.body.longURL);
