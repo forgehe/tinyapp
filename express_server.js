@@ -35,32 +35,37 @@ app.get("/about", function(req, res) {
 app.post("/urls", (req, res) => {
   let shortURL = generateRandomString();
   let input = encodeURI(req.body.longURL);
+  while (urlDatabase[shortURL]) {
+    shortURL = generateRandomString();
+  }
   if (!(input.startsWith("http://") || input.startsWith("https://"))) {
     input = "https://" + input;
+  }
+  if (
+    !input.match(
+      /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g
+    )
+  ) {
+    res.send("Not a valid URL, try again");
   }
   urlDatabase[shortURL] = input;
   console.log(shortURL, input);
   res.redirect(`urls/${shortURL}`);
-  // res.redirect("pages/urls_show", templateVars);
-  // res.send("Ok"); // Respond with 'Ok' (we will replace this)
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  // delete urlDatabase[:shortURL];
   console.log(req.params.shortURL);
   delete urlDatabase[req.params.shortURL];
   res.redirect("/urls");
-  // res.redirect("pages/urls_show", templateVars);
-  // res.send("Ok"); // Respond with 'Ok' (we will replace this)
 });
 
 app.post("/urls/:shortURL", (req, res) => {
-  // delete urlDatabase[:shortURL];
-  console.log(req.params.shortURL, req.body);
-  urlDatabase[req.params.shortURL] = req.body.editURL;
+  let input = encodeURI(req.body.editURL);
+  if (!(input.startsWith("http://") || input.startsWith("https://"))) {
+    input = "https://" + input;
+  }
+  urlDatabase[req.params.shortURL] = input;
   res.redirect("/urls");
-  // res.redirect("pages/urls_show", templateVars);
-  // res.send("Ok"); // Respond with 'Ok' (we will replace this)
 });
 
 app.get("/urls", (req, res) => {
