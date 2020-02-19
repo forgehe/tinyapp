@@ -70,9 +70,9 @@ const generateRandomString = () => {
   return output;
 };
 
-const checkEmail = obj => {
-  const userDatabaseArray = Object.values(userDatabase);
-  const found = userDatabaseArray.find(object => object.email === obj.email);
+const checkEmail = (database, obj) => {
+  const databaseArray = Object.values(database);
+  const found = databaseArray.find(object => object.email === obj.email);
   return found;
 };
 
@@ -125,7 +125,7 @@ app.get("/about", function(req, res) {
 });
 
 app.post("/login", (req, res) => {
-  const user = checkEmail(req.body);
+  const user = checkEmail(userDatabase, req.body);
   if (!user) {
     let templateErrors = renderError(403);
     res.statusCode = 403;
@@ -150,7 +150,7 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-  const user = checkEmail(req.body);
+  const user = checkEmail(userDatabase, req.body);
   const password = bcrypt.hashSync(req.body.password, salt);
   if (!user) {
     const ranString = generateRandomString();
