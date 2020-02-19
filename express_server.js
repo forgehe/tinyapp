@@ -79,6 +79,21 @@ const renderError = errorCode => {
   return templateErrors;
 };
 
+const encodeURL = string => {
+  let newString = encodeURI(string);
+  if (!(newString.startsWith("http://") || newString.startsWith("https://"))) {
+    newString = "https://" + newString;
+  }
+  if (
+    !newString.match(
+      /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g
+    )
+  ) {
+    return false;
+  }
+  return newString;
+};
+
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -132,26 +147,24 @@ app.post("/register", (req, res) => {
 
 app.post("/urls", (req, res) => {
   let shortURL = generateRandomString();
-  let input = encodeURI(req.body.longURL);
+  console.log(req.body.longURL);
+  let input = encodeURL(req.body.longURL);
   while (urlDatabase[shortURL]) {
     shortURL = generateRandomString();
   }
-  if (!(input.startsWith("http://") || input.startsWith("https://"))) {
-    input = "https://" + input;
-  }
-  if (
-    !input.match(
-      /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g
-    )
-  ) {
-    res.send("Not a valid URL, try again");
-  }
-  urlDatabase[shortURL] = {
-    longURL: input,
-    userID: req.cookies.user_id
-  };
+
   // console.log(shortURL, input);
-  res.redirect(`urls/${shortURL}`);
+  if (input === false) {
+    let templateErrors = renderError(400);
+    res.statusCode = 400;
+    res.render("pages/error_page", templateErrors);
+  } else {
+    urlDatabase[shortURL] = {
+      longURL: input,
+      userID: req.cookies.user_id
+    };
+    res.redirect(`urls/${shortURL}`);
+  }
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -167,13 +180,21 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/urls/:shortURL", (req, res) => {
-  // console.log(req.params);
-  let input = encodeURI(req.body.editURL);
-  if (!(input.startsWith("http://") || input.startsWith("https://"))) {
-    input = "https://" + input;
+  if (urlDatabase[req.params.shortURL].userID !== req.cookies.user_id) {
+    let templateErrors = renderError(403);
+    res.statusCode = 403;
+    res.render("/error_page", templateErrors);
+  } else {
+    let input = encodeURL(req.body.longURL);
+    if (input === false) {
+      let templateErrors = renderError(400);
+      res.statusCode = 400;
+      res.render("pages/error_page", templateErrors);
+    } else {
+      urlDatabase[req.params.shortURL].longURL = input;
+      res.redirect("/urls");
+    }
   }
-  urlDatabase[req.params.shortURL].longURL = input;
-  res.redirect("/urls");
 });
 
 app.get("/register", (req, res) => {
