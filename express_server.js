@@ -76,13 +76,13 @@ const checkEmail = (database, obj) => {
   return found;
 };
 
-const urlsForUser = userID => {
+const urlsForUser = (database, userID) => {
   let output = {};
-  for (const objID in urlDatabase) {
+  for (const objID in database) {
     // eslint-disable-next-line no-prototype-builtins
-    if (urlDatabase.hasOwnProperty(objID)) {
-      if (urlDatabase[objID].userID === userID) {
-        output[objID] = urlDatabase[objID];
+    if (database.hasOwnProperty(objID)) {
+      if (database[objID].userID === userID) {
+        output[objID] = database[objID];
       }
     }
   }
@@ -239,7 +239,7 @@ app.get("/login", (req, res) => {
 
 app.get("/urls", (req, res) => {
   const userID = req.session.userID;
-  const userURLS = urlsForUser(userID);
+  const userURLS = urlsForUser(urlDatabase, userID);
 
   let templateVars = {
     username: userDatabase[userID],
