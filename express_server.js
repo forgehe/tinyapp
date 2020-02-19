@@ -64,7 +64,8 @@ app.use(cookieParser());
 // index page
 app.get("/", function(req, res) {
   let templateVars = {
-    //headTitle: "Title"
+    username: null,
+    headTitle: "Title"
   };
   res.render("pages/index", templateVars);
 });
@@ -128,7 +129,10 @@ app.post("/urls", (req, res) => {
   ) {
     res.send("Not a valid URL, try again");
   }
-  urlDatabase[shortURL].longURL = input;
+  urlDatabase[shortURL] = {
+    longURL: input
+  };
+
   // console.log(shortURL, input);
   res.redirect(`urls/${shortURL}`);
 });
