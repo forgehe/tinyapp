@@ -4,8 +4,8 @@ const PORT = 8080; // default port 8080
 const cookieSession = require("cookie-session");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
-
 const { secretKey, salt } = require("./secret.js");
+const { generateRandomString, checkEmail, urlsForUser, renderError, encodeURL } = require("./helpers.js");
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -22,93 +22,6 @@ app.use(
 const urlDatabase = {};
 
 const userDatabase = {};
-
-const errorDatabase = {
-  400: {
-    name: "Bad Request",
-    desc: "The server cannot process the request."
-  },
-  401: {
-    name: "Unauthorized",
-    desc: "authentication is required."
-  },
-  403: {
-    name: "Forbidden",
-    desc: "You do not have the necessary permissions."
-  },
-  404: {
-    name: "Not Found",
-    desc: "The requested resource could not be found."
-  },
-  405: {
-    name: "Method Not Allowed",
-    desc: "A requested method is not supported for the requested resource."
-  },
-  410: {
-    name: "Gone",
-    desc: "The resource requested is no longer available and will not be available again."
-  },
-  418: {
-    name: "I'm a teapot",
-    desc: "I am a teapot."
-  },
-  500: {
-    name: "Internal Server Error",
-    desc: "Internal Server Error. Please wait, and try again."
-  },
-  501: {
-    name: "Not Implemented",
-    desc: "The server does not recognize the request."
-  }
-};
-
-// From: https://stackoverflow.com/a/8084248/6024104
-const generateRandomString = () => {
-  let output = Math.random()
-    .toString(36)
-    .substring(7);
-  return output;
-};
-
-const checkEmail = (database, obj) => {
-  const databaseArray = Object.values(database);
-  const found = databaseArray.find(object => object.email === obj.email);
-  return found;
-};
-
-const urlsForUser = (database, userID) => {
-  let output = {};
-  for (const objID in database) {
-    // eslint-disable-next-line no-prototype-builtins
-    if (database.hasOwnProperty(objID)) {
-      if (database[objID].userID === userID) {
-        output[objID] = database[objID];
-      }
-    }
-  }
-  return output;
-};
-
-const renderError = errorCode => {
-  let templateErrors = {
-    username: null,
-    errorCode: errorCode,
-    errorDatabase: errorDatabase
-  };
-  return templateErrors;
-};
-
-const encodeURL = string => {
-  let newString = encodeURI(string);
-  if (!(newString.startsWith("http://") || newString.startsWith("https://"))) {
-    newString = "https://" + newString;
-  }
-  // eslint-disable-next-line no-useless-escape
-  if (!newString.match(/(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g)) {
-    return false;
-  }
-  return newString;
-};
 
 // index page
 app.get("/", function(req, res) {
@@ -127,24 +40,19 @@ app.get("/about", function(req, res) {
 app.post("/login", (req, res) => {
   const user = checkEmail(userDatabase, req.body);
   if (!user) {
-    let templateErrors = renderError(403);
-    res.statusCode = 403;
-    res.render("pages/error_page", templateErrors);
+    renderError(res, 403, "Invalid Username or Password");
   } else {
     const pwCheck = bcrypt.compareSync(req.body.password, user.password);
     if (user && user.email === req.body.email && pwCheck) {
       req.session.userID = user.id;
       res.redirect("/urls");
     } else {
-      let templateErrors = renderError(403);
-      res.statusCode = 403;
-      res.render("pages/error_page", templateErrors);
+      renderError(res, 403, "Invalid Username or Password");
     }
   }
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
   req.session.userID = null;
   res.redirect("/urls");
 });
@@ -162,9 +70,7 @@ app.post("/register", (req, res) => {
     req.session.userID = ranString;
     res.redirect("/urls");
   } else {
-    let templateErrors = renderError(400);
-    res.statusCode = 400;
-    res.render("pages/error_page", templateErrors);
+    renderError(res, 400, "User Already Taken");
   }
 });
 
@@ -175,9 +81,7 @@ app.post("/urls", (req, res) => {
     shortURL = generateRandomString();
   }
   if (input === false) {
-    let templateErrors = renderError(400);
-    res.statusCode = 400;
-    res.render("pages/error_page", templateErrors);
+    renderError(res, 400, "Invalid Link. Try Again.");
   } else {
     const userID = req.session.userID;
     urlDatabase[shortURL] = {
@@ -191,9 +95,7 @@ app.post("/urls", (req, res) => {
 app.post("/urls/:shortURL/delete", (req, res) => {
   const userID = req.session.userID;
   if (urlDatabase[req.params.shortURL].userID !== userID) {
-    let templateErrors = renderError(403);
-    res.statusCode = 403;
-    res.render("/error_page", templateErrors);
+    renderError(res, 403, "Invalid Operation");
   } else {
     delete urlDatabase[req.params.shortURL];
     res.redirect("/urls");
@@ -203,15 +105,11 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.post("/urls/:shortURL", (req, res) => {
   const userID = req.session.userID;
   if (urlDatabase[req.params.shortURL].userID !== userID) {
-    let templateErrors = renderError(403);
-    res.statusCode = 403;
-    res.render("/error_page", templateErrors);
+    renderError(res, 403, "You do not have access to this URL");
   } else {
     let input = encodeURL(req.body.editURL);
     if (input === false) {
-      let templateErrors = renderError(400);
-      res.statusCode = 400;
-      res.render("pages/error_page", templateErrors);
+      renderError(res, 400, "Invalid Link. Try Again.");
     } else {
       urlDatabase[req.params.shortURL].longURL = input;
       res.redirect("/urls");
@@ -274,9 +172,7 @@ app.get("/urls/:shortURL", (req, res) => {
     };
     res.render("pages/urls_show", templateVars);
   } else {
-    let templateErrors = renderError(404);
-    res.statusCode = 404;
-    res.render("pages/error_page", templateErrors);
+    renderError(res, 404, "TinyURL not found. Check your address's spelling and try again.");
   }
 });
 
@@ -284,9 +180,7 @@ app.get("/u/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL] !== undefined) {
     res.redirect(urlDatabase[req.params.shortURL].longURL);
   } else {
-    let templateErrors = renderError(404);
-    res.statusCode = 404;
-    res.render("pages/error_page", templateErrors);
+    renderError(res, 404, "Redirect not found. Check your address's spelling and try again.");
   }
 });
 
