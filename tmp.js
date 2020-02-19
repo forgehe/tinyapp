@@ -27,3 +27,7 @@ let userID = decryptoCookie.toString(CryptoJS.enc.Utf8);
 let userID = decryptedCookie(req.cookies.user_id, secretKey);
 
 let cryptoCookie = encryptedCookie(user.id, secretKey);
+
+describe("getUserByEmail", function() {
+  it("should explain the test here", function() {});
+});

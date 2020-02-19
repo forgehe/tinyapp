@@ -64,18 +64,6 @@ const errorDatabase = {
   }
 };
 
-// const renderError = errorCode => {
-//   let templateErrors = {
-//     username: null,
-//     errorCode: errorCode,
-//     errorDatabase: errorDatabase
-//   };
-//   return templateErrors;
-// };
-
-// let templateErrors = renderError(403);
-// res.statusCode = 403;
-// res.render("pages/error_page", templateErrors);
 const renderError = (res, errorCode, extraText) => {
   let templateErrors = {
     username: null,
@@ -88,12 +76,14 @@ const renderError = (res, errorCode, extraText) => {
 };
 
 const encodeURL = string => {
-  let newString = encodeURI(string);
+  let newString = string.trim();
   if (!(newString.startsWith("http://") || newString.startsWith("https://"))) {
     newString = "https://" + newString;
   }
+  newString = encodeURI(newString);
   // eslint-disable-next-line no-useless-escape
-  if (!newString.match(/(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g)) {
+  // from: https://stackoverflow.com/a/3809435/6024104 (restrictive version)
+  if (!newString.match(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g)) {
     return false;
   }
   return newString;
