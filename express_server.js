@@ -54,7 +54,6 @@ const checkEmail = obj => {
 const urlsForUser = userID => {
   let output = {};
   for (const objID in urlDatabase) {
-    // console.log(urlDatabase[objID].userID);
     // eslint-disable-next-line no-prototype-builtins
     if (urlDatabase.hasOwnProperty(objID)) {
       if (urlDatabase[objID].userID === userID) {
@@ -91,7 +90,6 @@ const encodeURL = string => {
 };
 
 const decryptedCookie = (encryptedCookie, secretKey) => {
-  console.log(`decryptedCookie: ${encryptedCookie}, ${secretKey}`);
   if (encryptedCookie && secretKey) {
     let decryptoCookie = CryptoJS.AES.decrypt(encryptedCookie, secretKey);
     let userID = decryptoCookie.toString(CryptoJS.enc.Utf8);
@@ -107,10 +105,6 @@ const encryptedCookie = (cookie, secretKey) => {
   } else {
     return null;
   }
-};
-
-const setCookie = () => {
-  return null;
 };
 
 // index page
@@ -136,9 +130,7 @@ app.post("/login", (req, res) => {
   } else {
     const pwCheck = bcrypt.compareSync(req.body.password, user.password);
     if (user && user.email === req.body.email && pwCheck) {
-      console.log(user.id, ":", secretKey, ":");
       let cryptoCookie = encryptedCookie(user.id, secretKey);
-      console.log(cryptoCookie, "=", user.id);
       res.cookie("user_id", cryptoCookie);
       res.redirect("/urls");
     } else {
@@ -180,7 +172,6 @@ app.post("/urls", (req, res) => {
   while (urlDatabase[shortURL]) {
     shortURL = generateRandomString();
   }
-  // console.log(shortURL, input);
   if (input === false) {
     let templateErrors = renderError(400);
     res.statusCode = 400;
@@ -196,7 +187,6 @@ app.post("/urls", (req, res) => {
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  // console.log(req.params.shortURL);
   let userID = decryptedCookie(req.cookies.user_id, secretKey);
   if (urlDatabase[req.params.shortURL].userID !== userID) {
     let templateErrors = renderError(403);
@@ -215,7 +205,6 @@ app.post("/urls/:shortURL", (req, res) => {
     res.statusCode = 403;
     res.render("/error_page", templateErrors);
   } else {
-    console.log(req.body);
     let input = encodeURL(req.body.editURL);
     if (input === false) {
       let templateErrors = renderError(400);
@@ -247,23 +236,19 @@ app.get("/login", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  console.log("req.cookies.user_id", req.cookies.user_id);
   let userID = decryptedCookie(req.cookies.user_id, secretKey);
   const userURLS = urlsForUser(userID);
 
-  // console.log(userURLS);
   let templateVars = {
     username: userDatabase[userID],
     headTitle: "URL Index",
     urls: userURLS
   };
-  // console.log(templateVars);
   res.render("pages/urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
   let userID = decryptedCookie(req.cookies.user_id, secretKey);
-  console.log(userID);
   if (userDatabase[userID]) {
     let templateVars = {
       username: userDatabase[userID],
@@ -285,7 +270,6 @@ app.get("/urls/:shortURL", (req, res) => {
       shortURL: req.params.shortURL,
       longURL: urlDatabase[req.params.shortURL].longURL
     };
-    // console.log(templateVars.longURL);
     res.render("pages/urls_show", templateVars);
   } else {
     let templateErrors = renderError(404);
