@@ -26,7 +26,7 @@
         }
         .login-form {
           display: grid;
-          grid-template-columns: 3fr 1fr;
+          grid-template-columns: 1fr 1fr;
           margin: auto;
         }
         .register {
@@ -35,22 +35,21 @@
       </style>
       <% if (username) { %>
       <div class="logged-in">
-        <h6>Welcome Back <%= username %>!</h6>
+        <h6>Welcome Back <%= username.email %>!</h6>
         <form method="POST" action="/logout">
-          <button type="submit" value="logout">Logout</button>
+          <button class="btn btn-danger" type="submit" value="logout">Logout</button>
         </form>
       </div>
       <% } else { %>
       <div class="login-form">
         <div class="login">
-          <form method="POST" action="/login">
-            <input type="text" name="username" placeholder="Enter Username Here" />
-            <button type="submit" value="Submit">Submit</button>
+          <form method="GET" action="/login">
+            <button class="btn btn-primary" type="submit" value="Login">Login</button>
           </form>
         </div>
         <div class="register">
           <form method="GET" action="/register">
-            <button type="submit" value="Submit">Register</button>
+            <button class="btn btn-secondary" type="submit" value="Register">Register</button>
           </form>
         </div>
       </div>

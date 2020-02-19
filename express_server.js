@@ -30,6 +30,12 @@ const generateRandomString = () => {
   return output;
 };
 
+const checkEmail = obj => {
+  const userDatabaseArray = Object.values(userDatabase);
+  const found = userDatabaseArray.find(object => object.email === obj.email);
+  return found;
+};
+
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -48,25 +54,36 @@ app.get("/about", function(req, res) {
 });
 
 app.post("/login", (req, res) => {
-  res.cookie("username", req.body.username);
+  const user = checkEmail(req.body);
+  console.log(req.body);
+  if (user && user.email === req.body.email && user.password === req.body.password) {
+    console.log("Pass Login!", user.id);
+    res.cookie("user_id", user.id);
+  }
   res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("username");
+  res.clearCookie("user_id");
   res.redirect("/urls");
 });
 
 app.post("/register", (req, res) => {
-  const ranString = generateRandomString();
-  userDatabase[ranString] = {
-    id: ranString,
-    email: req.body.email,
-    password: req.body.password
-  };
-  res.cookie("user_id", ranString);
-  console.log(ranString, userDatabase[ranString]);
-  res.redirect("/urls");
+  const user = checkEmail(req.body);
+  if (!user) {
+    const ranString = generateRandomString();
+    userDatabase[ranString] = {
+      id: ranString,
+      email: req.body.email,
+      password: req.body.password
+    };
+    res.cookie("user_id", ranString);
+    console.log(ranString, userDatabase[ranString]);
+    res.redirect("/urls");
+  } else {
+    res.statusCode = 400;
+    res.send("Email already taken. Try Again");
+  }
 });
 
 app.post("/urls", (req, res) => {
@@ -108,24 +125,33 @@ app.post("/urls/:shortURL", (req, res) => {
 
 app.get("/register", (req, res) => {
   let templateVars = {
-    username: req.cookies["user_id"],
+    username: userDatabase[req.cookies.user_id],
     headTitle: "Register New User"
   };
   res.render("pages/register", templateVars);
 });
 
+app.get("/login", (req, res) => {
+  let templateVars = {
+    username: userDatabase[req.cookies.user_id],
+    headTitle: "Login Page"
+  };
+  res.render("pages/login", templateVars);
+});
+
 app.get("/urls", (req, res) => {
   let templateVars = {
-    username: req.cookies["username"],
+    username: userDatabase[req.cookies.user_id],
     headTitle: "URL Index",
     urls: urlDatabase
   };
+  // console.log(templateVars);
   res.render("pages/urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
   let templateVars = {
-    username: req.cookies["username"],
+    username: userDatabase[req.cookies.user_id],
     headTitle: "Add New URL"
   };
   res.render("pages/urls_new", templateVars);
@@ -133,7 +159,7 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   let templateVars = {
-    username: req.cookies["username"],
+    username: userDatabase[req.cookies.user_id],
     headTitle: `TinyURL of ${urlDatabase[req.params.shortURL]}`,
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL]
