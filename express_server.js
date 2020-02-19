@@ -23,22 +23,6 @@ const urlDatabase = {};
 
 const userDatabase = {};
 
-app.get("/", function(req, res) {
-  let templateVars = {
-    username: null,
-    headTitle: "Title"
-  };
-  res.render("pages/index", templateVars);
-});
-
-app.get("/about", function(req, res) {
-  let templateVars = {
-    username: null,
-    headTitle: "About"
-  };
-  res.render("pages/about", templateVars);
-});
-
 app.post("/login", (req, res) => {
   const user = checkEmail(userDatabase, req.body);
   if (!user) {
@@ -62,7 +46,7 @@ app.post("/logout", (req, res) => {
 app.post("/register", (req, res) => {
   const user = checkEmail(userDatabase, req.body);
   const password = bcrypt.hashSync(req.body.password, salt);
-  if (user) {
+  if (user || !req.body.email || !req.body.password) {
     renderError(res, 400, "User Already Taken");
   } else {
     const ranString = generateRandomString();
@@ -77,20 +61,24 @@ app.post("/register", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  let shortURL = generateRandomString();
-  let input = encodeURL(req.body.longURL);
-  while (urlDatabase[shortURL]) {
-    shortURL = generateRandomString();
-  }
-  if (input === false) {
-    renderError(res, 400, "Invalid Link. Try Again.");
+  if (!req.session.userID) {
+    renderError(res, 403, "Please Login First Before Creating an URL.");
   } else {
-    const userID = req.session.userID;
-    urlDatabase[shortURL] = {
-      longURL: input,
-      userID: userID
-    };
-    res.redirect(`urls/${shortURL}`);
+    const input = encodeURL(req.body.longURL);
+    if (input === false) {
+      renderError(res, 400, "Invalid Link. Try Again.");
+    } else {
+      let shortURL = generateRandomString();
+      while (urlDatabase[shortURL]) {
+        shortURL = generateRandomString();
+      }
+      const userID = req.session.userID;
+      urlDatabase[shortURL] = {
+        longURL: input,
+        userID: userID
+      };
+      res.redirect(`urls/${shortURL}`);
+    }
   }
 });
 
@@ -107,9 +95,9 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.post("/urls/:shortURL", (req, res) => {
   const userID = req.session.userID;
   if (urlDatabase[req.params.shortURL].userID !== userID) {
-    renderError(res, 403, "You do not have access to this URL");
+    renderError(res, 403, "You do not have access to edit this URL");
   } else {
-    let input = encodeURL(req.body.editURL);
+    const input = encodeURL(req.body.editURL);
     if (input === false) {
       renderError(res, 400, "Invalid Link. Try Again.");
     } else {
@@ -120,28 +108,36 @@ app.post("/urls/:shortURL", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  const userID = req.session.userID;
-  let templateVars = {
-    username: userDatabase[userID],
-    headTitle: "Register New User"
-  };
-  res.render("pages/register", templateVars);
+  if (req.session.userID) {
+    res.redirect("/urls");
+  } else {
+    const userID = req.session.userID;
+    const templateVars = {
+      username: userDatabase[userID],
+      headTitle: "Register New User"
+    };
+    res.render("pages/register", templateVars);
+  }
 });
 
 app.get("/login", (req, res) => {
-  const userID = req.session.userID;
-  let templateVars = {
-    username: userDatabase[userID],
-    headTitle: "Login Page"
-  };
-  res.render("pages/login", templateVars);
+  if (req.session.userID) {
+    res.redirect("/urls");
+  } else {
+    const userID = req.session.userID;
+    const templateVars = {
+      username: userDatabase[userID],
+      headTitle: "Login Page"
+    };
+    res.render("pages/login", templateVars);
+  }
 });
 
 app.get("/urls", (req, res) => {
   const userID = req.session.userID;
   const userURLS = urlsForUser(urlDatabase, userID);
 
-  let templateVars = {
+  const templateVars = {
     username: userDatabase[userID],
     headTitle: "URL Index",
     urls: userURLS
@@ -154,7 +150,7 @@ app.get("/urls/new", (req, res) => {
   if (!userDatabase[userID]) {
     res.redirect("/login");
   } else {
-    let templateVars = {
+    const templateVars = {
       username: userDatabase[userID],
       headTitle: "Add New URL"
     };
@@ -167,7 +163,7 @@ app.get("/urls/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL] === undefined) {
     renderError(res, 404, "TinyURL not found. Check your address's spelling and try again.");
   } else {
-    let templateVars = {
+    const templateVars = {
       username: userDatabase[userID],
       headTitle: `TinyURL of ${urlDatabase[req.params.shortURL].longURL}`,
       shortURL: req.params.shortURL,
@@ -185,11 +181,12 @@ app.get("/u/:shortURL", (req, res) => {
   }
 });
 
-app.get("/hello", (req, res) => {
-  let templateVars = {
-    greeting: "Hello World!"
-  };
-  res.render("pages/hello_world", templateVars);
+app.get("/", function(req, res) {
+  if (!req.session.userID) {
+    res.redirect("/login");
+  } else {
+    res.redirect("/urls");
+  }
 });
 
 app.listen(PORT, () => {
