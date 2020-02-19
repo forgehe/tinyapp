@@ -23,7 +23,6 @@ const urlDatabase = {};
 
 const userDatabase = {};
 
-// index page
 app.get("/", function(req, res) {
   let templateVars = {
     username: null,
@@ -32,7 +31,6 @@ app.get("/", function(req, res) {
   res.render("pages/index", templateVars);
 });
 
-// about page
 app.get("/about", function(req, res) {
   let templateVars = {
     username: null,
@@ -47,11 +45,11 @@ app.post("/login", (req, res) => {
     renderError(res, 403, "Invalid Username or Password");
   } else {
     const pwCheck = bcrypt.compareSync(req.body.password, user.password);
-    if (user && user.email === req.body.email && pwCheck) {
+    if (!user || user.email !== req.body.email || !pwCheck) {
+      renderError(res, 403, "Invalid Username or Password");
+    } else {
       req.session.userID = user.id;
       res.redirect("/urls");
-    } else {
-      renderError(res, 403, "Invalid Username or Password");
     }
   }
 });
@@ -64,7 +62,9 @@ app.post("/logout", (req, res) => {
 app.post("/register", (req, res) => {
   const user = checkEmail(userDatabase, req.body);
   const password = bcrypt.hashSync(req.body.password, salt);
-  if (!user) {
+  if (user) {
+    renderError(res, 400, "User Already Taken");
+  } else {
     const ranString = generateRandomString();
     userDatabase[ranString] = {
       id: ranString,
@@ -73,8 +73,6 @@ app.post("/register", (req, res) => {
     };
     req.session.userID = ranString;
     res.redirect("/urls");
-  } else {
-    renderError(res, 400, "User Already Taken");
   }
 });
 
@@ -153,20 +151,22 @@ app.get("/urls", (req, res) => {
 
 app.get("/urls/new", (req, res) => {
   const userID = req.session.userID;
-  if (userDatabase[userID]) {
+  if (!userDatabase[userID]) {
+    res.redirect("/login");
+  } else {
     let templateVars = {
       username: userDatabase[userID],
       headTitle: "Add New URL"
     };
     res.render("pages/urls_new", templateVars);
-  } else {
-    res.redirect("/login");
   }
 });
 
 app.get("/urls/:shortURL", (req, res) => {
   const userID = req.session.userID;
-  if (urlDatabase[req.params.shortURL] !== undefined) {
+  if (urlDatabase[req.params.shortURL] === undefined) {
+    renderError(res, 404, "TinyURL not found. Check your address's spelling and try again.");
+  } else {
     let templateVars = {
       username: userDatabase[userID],
       headTitle: `TinyURL of ${urlDatabase[req.params.shortURL].longURL}`,
@@ -174,25 +174,15 @@ app.get("/urls/:shortURL", (req, res) => {
       longURL: urlDatabase[req.params.shortURL].longURL
     };
     res.render("pages/urls_show", templateVars);
-  } else {
-    renderError(res, 404, "TinyURL not found. Check your address's spelling and try again.");
   }
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  if (urlDatabase[req.params.shortURL] !== undefined) {
-    res.redirect(urlDatabase[req.params.shortURL].longURL);
-  } else {
+  if (urlDatabase[req.params.shortURL] === undefined) {
     renderError(res, 404, "Redirect not found. Check your address's spelling and try again.");
+  } else {
+    res.redirect(urlDatabase[req.params.shortURL].longURL);
   }
-});
-
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-app.get("/users.json", (req, res) => {
-  res.json(userDatabase);
 });
 
 app.get("/hello", (req, res) => {
