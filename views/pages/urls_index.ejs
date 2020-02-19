@@ -7,7 +7,6 @@
     <%- include('../partials/_header') %>
     <main style="margin: 1em;">
       <h3>My URLs</h3>
-      <p><%= JSON.stringify(urls) %></p>
       <table class="table" style="text-align: center;">
         <thead>
           <tr>
@@ -42,8 +41,9 @@
           </tr>
           <% } %>
         </tbody>
+
+        <% } %>
       </table>
-      <% } %>
     </main>
     <%- include('../partials/_footer') %>
   </body>
