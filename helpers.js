@@ -81,8 +81,8 @@ const encodeURL = string => {
     newString = "https://" + newString;
   }
   newString = encodeURI(newString);
-  // eslint-disable-next-line no-useless-escape
   // from: https://stackoverflow.com/a/3809435/6024104 (restrictive version)
+  // eslint-disable-next-line no-useless-escape
   if (!newString.match(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g)) {
     return false;
   }
