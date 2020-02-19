@@ -34,7 +34,11 @@ app.get("/", function(req, res) {
 
 // about page
 app.get("/about", function(req, res) {
-  res.render("pages/about");
+  let templateVars = {
+    username: null,
+    headTitle: "About"
+  };
+  res.render("pages/about", templateVars);
 });
 
 app.post("/login", (req, res) => {
@@ -162,7 +166,6 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   const userID = req.session.userID;
-
   if (urlDatabase[req.params.shortURL] !== undefined) {
     let templateVars = {
       username: userDatabase[userID],
