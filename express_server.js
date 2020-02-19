@@ -5,8 +5,8 @@ const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 
 const urlDatabase = {
-  b2xVn2: "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: { longURL: "https://www.tsn.ca", userID: "aJ48lW" },
+  i3BoGr: { longURL: "https://www.google.ca", userID: "aJ48lW" }
 };
 
 const userDatabase = {
@@ -128,7 +128,7 @@ app.post("/urls", (req, res) => {
   ) {
     res.send("Not a valid URL, try again");
   }
-  urlDatabase[shortURL] = input;
+  urlDatabase[shortURL].longURL = input;
   // console.log(shortURL, input);
   res.redirect(`urls/${shortURL}`);
 });
@@ -145,7 +145,7 @@ app.post("/urls/:shortURL", (req, res) => {
   if (!(input.startsWith("http://") || input.startsWith("https://"))) {
     input = "https://" + input;
   }
-  urlDatabase[req.params.shortURL] = input;
+  urlDatabase[req.params.shortURL].longURL = input;
   res.redirect("/urls");
 });
 
@@ -191,9 +191,9 @@ app.get("/urls/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL] !== undefined) {
     let templateVars = {
       username: userDatabase[req.cookies.user_id],
-      headTitle: `TinyURL of ${urlDatabase[req.params.shortURL]}`,
+      headTitle: `TinyURL of ${urlDatabase[req.params.shortURL].longURL}`,
       shortURL: req.params.shortURL,
-      longURL: urlDatabase[req.params.shortURL]
+      longURL: urlDatabase[req.params.shortURL].longURL
     };
     // console.log(templateVars.longURL);
     res.render("pages/urls_show", templateVars);
@@ -210,7 +210,7 @@ app.get("/urls/:shortURL", (req, res) => {
 
 app.get("/u/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL] !== undefined) {
-    res.redirect(urlDatabase[req.params.shortURL]);
+    res.redirect(urlDatabase[req.params.shortURL].longURL);
   } else {
     res.statusCode = 404;
     let templateVars = {
