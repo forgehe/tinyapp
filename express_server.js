@@ -22,6 +22,27 @@ const userDatabase = {
   }
 };
 
+const errorDatabase = {
+  400: { name: "Bad Request", desc: "The server cannot process the request." },
+  401: { name: "Unauthorized", desc: "authentication is required." },
+  403: { name: "Forbidden", desc: "You do not have the necessary permissions." },
+  404: { name: "Not Found", desc: "The requested resource could not be found." },
+  405: {
+    name: "Method Not Allowed",
+    desc: "A requested method is not supported for the requested resource."
+  },
+  410: {
+    name: "Gone",
+    desc: "The resource requested is no longer available and will not be available again."
+  },
+  418: { name: "I'm a teapot", desc: "I am a teapot." },
+  500: {
+    name: "Internal Server Error",
+    desc: "Internal Server Error. Please wait, and try again."
+  },
+  501: { name: "Not Implemented", desc: "The server does not recognize the request." }
+};
+
 // From: https://stackoverflow.com/a/8084248/6024104
 const generateRandomString = () => {
   let output = Math.random()
@@ -82,7 +103,12 @@ app.post("/register", (req, res) => {
     res.redirect("/urls");
   } else {
     res.statusCode = 400;
-    res.send("Email already taken. Try Again");
+    let templateVars = {
+      username: null,
+      errorCode: 400,
+      errorDatabase: errorDatabase
+    };
+    res.render("pages/error_page", templateVars);
   }
 });
 
@@ -158,14 +184,24 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  let templateVars = {
-    username: userDatabase[req.cookies.user_id],
-    headTitle: `TinyURL of ${urlDatabase[req.params.shortURL]}`,
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL]
-  };
-  // console.log(templateVars.longURL);
-  res.render("pages/urls_show", templateVars);
+  if (urlDatabase[req.params.shortURL] !== undefined) {
+    let templateVars = {
+      username: userDatabase[req.cookies.user_id],
+      headTitle: `TinyURL of ${urlDatabase[req.params.shortURL]}`,
+      shortURL: req.params.shortURL,
+      longURL: urlDatabase[req.params.shortURL]
+    };
+    // console.log(templateVars.longURL);
+    res.render("pages/urls_show", templateVars);
+  } else {
+    res.statusCode = 404;
+    let templateVars = {
+      username: null,
+      errorCode: 404,
+      errorDatabase: errorDatabase
+    };
+    res.render("pages/error_page", templateVars);
+  }
 });
 
 app.get("/u/:shortURL", (req, res) => {
@@ -173,7 +209,12 @@ app.get("/u/:shortURL", (req, res) => {
     res.redirect(urlDatabase[req.params.shortURL]);
   } else {
     res.statusCode = 404;
-    res.send("404, shortURL not found.");
+    let templateVars = {
+      username: null,
+      errorCode: 404,
+      errorDatabase: errorDatabase
+    };
+    res.render("pages/error_page", templateVars);
   }
 });
 
