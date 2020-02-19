@@ -4,10 +4,17 @@ const PORT = 8080; // default port 8080
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
+const CryptoJS = require("crypto-js");
+
+app.set("view engine", "ejs");
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 const urlDatabase = {};
 
 const userDatabase = {};
+
+const secretKey = CryptoJS.SHA512("SuperSecret").toString();
 
 const errorDatabase = {
   400: { name: "Bad Request", desc: "The server cannot process the request." },
@@ -83,9 +90,28 @@ const encodeURL = string => {
   return newString;
 };
 
-app.set("view engine", "ejs");
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
+const decryptedCookie = (encryptedCookie, secretKey) => {
+  console.log(`decryptedCookie: ${encryptedCookie}, ${secretKey}`);
+  if (encryptedCookie && secretKey) {
+    let decryptoCookie = CryptoJS.AES.decrypt(encryptedCookie, secretKey);
+    let userID = decryptoCookie.toString(CryptoJS.enc.Utf8);
+    return userID;
+  } else {
+    return null;
+  }
+};
+
+const encryptedCookie = (cookie, secretKey) => {
+  if (cookie && secretKey) {
+    return CryptoJS.AES.encrypt(cookie, secretKey).toString();
+  } else {
+    return null;
+  }
+};
+
+const setCookie = () => {
+  return null;
+};
 
 // index page
 app.get("/", function(req, res) {
@@ -110,7 +136,10 @@ app.post("/login", (req, res) => {
   } else {
     const pwCheck = bcrypt.compareSync(req.body.password, user.password);
     if (user && user.email === req.body.email && pwCheck) {
-      res.cookie("user_id", user.id);
+      console.log(user.id, ":", secretKey, ":");
+      let cryptoCookie = encryptedCookie(user.id, secretKey);
+      console.log(cryptoCookie, "=", user.id);
+      res.cookie("user_id", cryptoCookie);
       res.redirect("/urls");
     } else {
       let templateErrors = renderError(403);
@@ -135,7 +164,8 @@ app.post("/register", (req, res) => {
       email: req.body.email,
       password: password
     };
-    res.cookie("user_id", ranString);
+    let cryptoCookie = encryptedCookie(ranString, secretKey);
+    res.cookie("user_id", cryptoCookie);
     res.redirect("/urls");
   } else {
     let templateErrors = renderError(400);
@@ -146,21 +176,20 @@ app.post("/register", (req, res) => {
 
 app.post("/urls", (req, res) => {
   let shortURL = generateRandomString();
-  console.log(req.body.longURL);
   let input = encodeURL(req.body.longURL);
   while (urlDatabase[shortURL]) {
     shortURL = generateRandomString();
   }
-
   // console.log(shortURL, input);
   if (input === false) {
     let templateErrors = renderError(400);
     res.statusCode = 400;
     res.render("pages/error_page", templateErrors);
   } else {
+    let userID = decryptedCookie(req.cookies.user_id, secretKey);
     urlDatabase[shortURL] = {
       longURL: input,
-      userID: req.cookies.user_id
+      userID: userID
     };
     res.redirect(`urls/${shortURL}`);
   }
@@ -168,7 +197,8 @@ app.post("/urls", (req, res) => {
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   // console.log(req.params.shortURL);
-  if (urlDatabase[req.params.shortURL].userID !== req.cookies.user_id) {
+  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  if (urlDatabase[req.params.shortURL].userID !== userID) {
     let templateErrors = renderError(403);
     res.statusCode = 403;
     res.render("/error_page", templateErrors);
@@ -179,12 +209,14 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/urls/:shortURL", (req, res) => {
-  if (urlDatabase[req.params.shortURL].userID !== req.cookies.user_id) {
+  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  if (urlDatabase[req.params.shortURL].userID !== userID) {
     let templateErrors = renderError(403);
     res.statusCode = 403;
     res.render("/error_page", templateErrors);
   } else {
-    let input = encodeURL(req.body.longURL);
+    console.log(req.body);
+    let input = encodeURL(req.body.editURL);
     if (input === false) {
       let templateErrors = renderError(400);
       res.statusCode = 400;
@@ -197,26 +229,31 @@ app.post("/urls/:shortURL", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
+  let userID = decryptedCookie(req.cookies.user_id, secretKey);
   let templateVars = {
-    username: userDatabase[req.cookies.user_id],
+    username: userDatabase[userID],
     headTitle: "Register New User"
   };
   res.render("pages/register", templateVars);
 });
 
 app.get("/login", (req, res) => {
+  let userID = decryptedCookie(req.cookies.user_id, secretKey);
   let templateVars = {
-    username: userDatabase[req.cookies.user_id],
+    username: userDatabase[userID],
     headTitle: "Login Page"
   };
   res.render("pages/login", templateVars);
 });
 
 app.get("/urls", (req, res) => {
-  const userURLS = urlsForUser(req.cookies.user_id);
+  console.log("req.cookies.user_id", req.cookies.user_id);
+  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  const userURLS = urlsForUser(userID);
+
   // console.log(userURLS);
   let templateVars = {
-    username: userDatabase[req.cookies.user_id],
+    username: userDatabase[userID],
     headTitle: "URL Index",
     urls: userURLS
   };
@@ -225,9 +262,11 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  if (userDatabase[req.cookies.user_id]) {
+  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  console.log(userID);
+  if (userDatabase[userID]) {
     let templateVars = {
-      username: userDatabase[req.cookies.user_id],
+      username: userDatabase[userID],
       headTitle: "Add New URL"
     };
     res.render("pages/urls_new", templateVars);
@@ -237,9 +276,11 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
+  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+
   if (urlDatabase[req.params.shortURL] !== undefined) {
     let templateVars = {
-      username: userDatabase[req.cookies.user_id],
+      username: userDatabase[userID],
       headTitle: `TinyURL of ${urlDatabase[req.params.shortURL].longURL}`,
       shortURL: req.params.shortURL,
       longURL: urlDatabase[req.params.shortURL].longURL
