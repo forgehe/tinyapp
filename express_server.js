@@ -57,6 +57,28 @@ const checkEmail = obj => {
   return found;
 };
 
+const urlsForUser = userID => {
+  let output = {};
+  for (const objID in urlDatabase) {
+    // console.log(urlDatabase[objID].userID);
+    if (urlDatabase.hasOwnProperty(objID)) {
+      if (urlDatabase[objID].userID === userID) {
+        output[objID] = urlDatabase[objID];
+      }
+    }
+  }
+  return output;
+};
+
+const renderError = errorCode => {
+  let templateErrors = {
+    username: null,
+    errorCode: errorCode,
+    errorDatabase: errorDatabase
+  };
+  return templateErrors;
+};
+
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -77,9 +99,9 @@ app.get("/about", function(req, res) {
 
 app.post("/login", (req, res) => {
   const user = checkEmail(req.body);
-  console.log(req.body);
+  // console.log(req.body);
   if (user && user.email === req.body.email && user.password === req.body.password) {
-    console.log("Pass Login!", user.id);
+    // console.log("Pass Login!", user.id);
     res.cookie("user_id", user.id);
   }
   res.redirect("/urls");
@@ -100,16 +122,11 @@ app.post("/register", (req, res) => {
       password: req.body.password
     };
     res.cookie("user_id", ranString);
-    console.log(ranString, userDatabase[ranString]);
     res.redirect("/urls");
   } else {
+    let templateErrors = renderError(400);
     res.statusCode = 400;
-    let templateVars = {
-      username: null,
-      errorCode: 400,
-      errorDatabase: errorDatabase
-    };
-    res.render("pages/error_page", templateVars);
+    res.render("pages/error_page", templateErrors);
   }
 });
 
@@ -130,17 +147,23 @@ app.post("/urls", (req, res) => {
     res.send("Not a valid URL, try again");
   }
   urlDatabase[shortURL] = {
-    longURL: input
+    longURL: input,
+    userID: req.cookies.user_id
   };
-
   // console.log(shortURL, input);
   res.redirect(`urls/${shortURL}`);
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   // console.log(req.params.shortURL);
-  delete urlDatabase[req.params.shortURL];
-  res.redirect("/urls");
+  if (urlDatabase[req.params.shortURL].userID !== req.cookies.user_id) {
+    let templateErrors = renderError(403);
+    res.statusCode = 403;
+    res.render("/error_page", templateErrors);
+  } else {
+    delete urlDatabase[req.params.shortURL];
+    res.redirect("/urls");
+  }
 });
 
 app.post("/urls/:shortURL", (req, res) => {
@@ -170,10 +193,12 @@ app.get("/login", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
+  const userURLS = urlsForUser(req.cookies.user_id);
+  // console.log(userURLS);
   let templateVars = {
     username: userDatabase[req.cookies.user_id],
     headTitle: "URL Index",
-    urls: urlDatabase
+    urls: userURLS
   };
   // console.log(templateVars);
   res.render("pages/urls_index", templateVars);
@@ -202,13 +227,9 @@ app.get("/urls/:shortURL", (req, res) => {
     // console.log(templateVars.longURL);
     res.render("pages/urls_show", templateVars);
   } else {
+    let templateErrors = renderError(404);
     res.statusCode = 404;
-    let templateVars = {
-      username: null,
-      errorCode: 404,
-      errorDatabase: errorDatabase
-    };
-    res.render("pages/error_page", templateVars);
+    res.render("pages/error_page", templateErrors);
   }
 });
 
@@ -216,13 +237,9 @@ app.get("/u/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL] !== undefined) {
     res.redirect(urlDatabase[req.params.shortURL].longURL);
   } else {
+    let templateErrors = renderError(404);
     res.statusCode = 404;
-    let templateVars = {
-      username: null,
-      errorCode: 404,
-      errorDatabase: errorDatabase
-    };
-    res.render("pages/error_page", templateVars);
+    res.render("pages/error_page", templateErrors);
   }
 });
 

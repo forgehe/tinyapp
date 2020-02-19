@@ -6,8 +6,8 @@
   <body>
     <%- include('../partials/_header') %>
     <main style="margin: 1em;">
-      <% if(urls) { %>
       <h3>My URLs</h3>
+      <p><%= JSON.stringify(urls) %></p>
       <table class="table" style="text-align: center;">
         <thead>
           <tr>
@@ -17,7 +17,15 @@
             <th scope="col">Delete</th>
           </tr>
         </thead>
-
+        <% if(Object.entries(urls).length === 0 && urls.constructor === Object) { %>
+        <tbody>
+          <div>
+            <h1>
+              No URLS Found. Try Logging in, or add a new URL.
+            </h1>
+          </div>
+        </tbody>
+        <% } else { %>
         <tbody>
           <% for(let url in urls) { %>
           <tr>
@@ -35,12 +43,6 @@
           <% } %>
         </tbody>
       </table>
-      <% } else { %>
-      <div>
-        <h1>
-          No URLS Found. Try Logging in, or add a new URL.
-        </h1>
-      </div>
       <% } %>
     </main>
     <%- include('../partials/_footer') %>
