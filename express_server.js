@@ -1,26 +1,45 @@
 const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
-const cookieParser = require("cookie-parser");
+const cookieSession = require("cookie-session");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
-const CryptoJS = require("crypto-js");
+
+const { secretKey, salt } = require("./secret.js");
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(
+  cookieSession({
+    name: "session",
+    keys: [secretKey],
+
+    // Cookie Options
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  })
+);
 
 const urlDatabase = {};
 
 const userDatabase = {};
 
-const secretKey = CryptoJS.SHA512("SuperSecret").toString();
-
 const errorDatabase = {
-  400: { name: "Bad Request", desc: "The server cannot process the request." },
-  401: { name: "Unauthorized", desc: "authentication is required." },
-  403: { name: "Forbidden", desc: "You do not have the necessary permissions." },
-  404: { name: "Not Found", desc: "The requested resource could not be found." },
+  400: {
+    name: "Bad Request",
+    desc: "The server cannot process the request."
+  },
+  401: {
+    name: "Unauthorized",
+    desc: "authentication is required."
+  },
+  403: {
+    name: "Forbidden",
+    desc: "You do not have the necessary permissions."
+  },
+  404: {
+    name: "Not Found",
+    desc: "The requested resource could not be found."
+  },
   405: {
     name: "Method Not Allowed",
     desc: "A requested method is not supported for the requested resource."
@@ -29,12 +48,18 @@ const errorDatabase = {
     name: "Gone",
     desc: "The resource requested is no longer available and will not be available again."
   },
-  418: { name: "I'm a teapot", desc: "I am a teapot." },
+  418: {
+    name: "I'm a teapot",
+    desc: "I am a teapot."
+  },
   500: {
     name: "Internal Server Error",
     desc: "Internal Server Error. Please wait, and try again."
   },
-  501: { name: "Not Implemented", desc: "The server does not recognize the request." }
+  501: {
+    name: "Not Implemented",
+    desc: "The server does not recognize the request."
+  }
 };
 
 // From: https://stackoverflow.com/a/8084248/6024104
@@ -78,33 +103,11 @@ const encodeURL = string => {
   if (!(newString.startsWith("http://") || newString.startsWith("https://"))) {
     newString = "https://" + newString;
   }
-  if (
-    !newString.match(
-      // eslint-disable-next-line no-useless-escape
-      /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g
-    )
-  ) {
+  // eslint-disable-next-line no-useless-escape
+  if (!newString.match(/(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g)) {
     return false;
   }
   return newString;
-};
-
-const decryptedCookie = (encryptedCookie, secretKey) => {
-  if (encryptedCookie && secretKey) {
-    let decryptoCookie = CryptoJS.AES.decrypt(encryptedCookie, secretKey);
-    let userID = decryptoCookie.toString(CryptoJS.enc.Utf8);
-    return userID;
-  } else {
-    return null;
-  }
-};
-
-const encryptedCookie = (cookie, secretKey) => {
-  if (cookie && secretKey) {
-    return CryptoJS.AES.encrypt(cookie, secretKey).toString();
-  } else {
-    return null;
-  }
 };
 
 // index page
@@ -130,8 +133,7 @@ app.post("/login", (req, res) => {
   } else {
     const pwCheck = bcrypt.compareSync(req.body.password, user.password);
     if (user && user.email === req.body.email && pwCheck) {
-      let cryptoCookie = encryptedCookie(user.id, secretKey);
-      res.cookie("user_id", cryptoCookie);
+      req.session.userID = user.id;
       res.redirect("/urls");
     } else {
       let templateErrors = renderError(403);
@@ -143,12 +145,13 @@ app.post("/login", (req, res) => {
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
+  req.session.userID = null;
   res.redirect("/urls");
 });
 
 app.post("/register", (req, res) => {
   const user = checkEmail(req.body);
-  const password = bcrypt.hashSync(req.body.password, 10);
+  const password = bcrypt.hashSync(req.body.password, salt);
   if (!user) {
     const ranString = generateRandomString();
     userDatabase[ranString] = {
@@ -156,8 +159,7 @@ app.post("/register", (req, res) => {
       email: req.body.email,
       password: password
     };
-    let cryptoCookie = encryptedCookie(ranString, secretKey);
-    res.cookie("user_id", cryptoCookie);
+    req.session.userID = ranString;
     res.redirect("/urls");
   } else {
     let templateErrors = renderError(400);
@@ -177,7 +179,7 @@ app.post("/urls", (req, res) => {
     res.statusCode = 400;
     res.render("pages/error_page", templateErrors);
   } else {
-    let userID = decryptedCookie(req.cookies.user_id, secretKey);
+    const userID = req.session.userID;
     urlDatabase[shortURL] = {
       longURL: input,
       userID: userID
@@ -187,7 +189,7 @@ app.post("/urls", (req, res) => {
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  const userID = req.session.userID;
   if (urlDatabase[req.params.shortURL].userID !== userID) {
     let templateErrors = renderError(403);
     res.statusCode = 403;
@@ -199,7 +201,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/urls/:shortURL", (req, res) => {
-  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  const userID = req.session.userID;
   if (urlDatabase[req.params.shortURL].userID !== userID) {
     let templateErrors = renderError(403);
     res.statusCode = 403;
@@ -218,7 +220,7 @@ app.post("/urls/:shortURL", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  const userID = req.session.userID;
   let templateVars = {
     username: userDatabase[userID],
     headTitle: "Register New User"
@@ -227,7 +229,7 @@ app.get("/register", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  const userID = req.session.userID;
   let templateVars = {
     username: userDatabase[userID],
     headTitle: "Login Page"
@@ -236,7 +238,7 @@ app.get("/login", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  const userID = req.session.userID;
   const userURLS = urlsForUser(userID);
 
   let templateVars = {
@@ -248,7 +250,7 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  const userID = req.session.userID;
   if (userDatabase[userID]) {
     let templateVars = {
       username: userDatabase[userID],
@@ -261,7 +263,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  let userID = decryptedCookie(req.cookies.user_id, secretKey);
+  const userID = req.session.userID;
 
   if (urlDatabase[req.params.shortURL] !== undefined) {
     let templateVars = {
@@ -292,8 +294,14 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+app.get("/users.json", (req, res) => {
+  res.json(userDatabase);
+});
+
 app.get("/hello", (req, res) => {
-  let templateVars = { greeting: "Hello World!" };
+  let templateVars = {
+    greeting: "Hello World!"
+  };
   res.render("pages/hello_world", templateVars);
 });
 
