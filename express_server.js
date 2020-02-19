@@ -3,24 +3,11 @@ const app = express();
 const PORT = 8080; // default port 8080
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
+const bcrypt = require("bcrypt");
 
-const urlDatabase = {
-  b6UTxQ: { longURL: "https://www.tsn.ca", userID: "aJ48lW" },
-  i3BoGr: { longURL: "https://www.google.ca", userID: "aJ48lW" }
-};
+const urlDatabase = {};
 
-const userDatabase = {
-  userRandomID: {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur"
-  },
-  user2RandomID: {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk"
-  }
-};
+const userDatabase = {};
 
 const errorDatabase = {
   400: { name: "Bad Request", desc: "The server cannot process the request." },
@@ -61,6 +48,7 @@ const urlsForUser = userID => {
   let output = {};
   for (const objID in urlDatabase) {
     // console.log(urlDatabase[objID].userID);
+    // eslint-disable-next-line no-prototype-builtins
     if (urlDatabase.hasOwnProperty(objID)) {
       if (urlDatabase[objID].userID === userID) {
         output[objID] = urlDatabase[objID];
@@ -86,6 +74,7 @@ const encodeURL = string => {
   }
   if (
     !newString.match(
+      // eslint-disable-next-line no-useless-escape
       /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g
     )
   ) {
@@ -114,12 +103,21 @@ app.get("/about", function(req, res) {
 
 app.post("/login", (req, res) => {
   const user = checkEmail(req.body);
-  // console.log(req.body);
-  if (user && user.email === req.body.email && user.password === req.body.password) {
-    // console.log("Pass Login!", user.id);
-    res.cookie("user_id", user.id);
+  if (!user) {
+    let templateErrors = renderError(403);
+    res.statusCode = 403;
+    res.render("pages/error_page", templateErrors);
+  } else {
+    const pwCheck = bcrypt.compareSync(req.body.password, user.password);
+    if (user && user.email === req.body.email && pwCheck) {
+      res.cookie("user_id", user.id);
+      res.redirect("/urls");
+    } else {
+      let templateErrors = renderError(403);
+      res.statusCode = 403;
+      res.render("pages/error_page", templateErrors);
+    }
   }
-  res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
@@ -129,12 +127,13 @@ app.post("/logout", (req, res) => {
 
 app.post("/register", (req, res) => {
   const user = checkEmail(req.body);
+  const password = bcrypt.hashSync(req.body.password, 10);
   if (!user) {
     const ranString = generateRandomString();
     userDatabase[ranString] = {
       id: ranString,
       email: req.body.email,
-      password: req.body.password
+      password: password
     };
     res.cookie("user_id", ranString);
     res.redirect("/urls");
