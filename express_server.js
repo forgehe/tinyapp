@@ -6,7 +6,9 @@ const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const methodOverride = require("method-override");
 const { secretKey, salt } = require("./secret.js");
-const { generateRandomString, checkEmail, urlsForUser, renderError, encodeURL, addAnalytic } = require("./helpers.js");
+const { generateRandomString, checkEmail, renderError, addAnalytic } = require("./helpers.js");
+const { urlDatabase, userDatabase } = require("./database.js");
+const urlsRoutes = require("./routes/urls");
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -28,9 +30,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const urlDatabase = {};
-
-const userDatabase = {};
+app.use("/urls", urlsRoutes());
 
 app.post("/login", (req, res) => {
   const user = checkEmail(userDatabase, req.body);
@@ -69,56 +69,6 @@ app.post("/register", (req, res) => {
   }
 });
 
-app.post("/urls", (req, res) => {
-  if (!req.session.userID) {
-    renderError(res, 403, "Please Login First Before Creating an URL.");
-  } else {
-    const input = encodeURL(req.body.longURL);
-    if (input === false) {
-      renderError(res, 400, "Invalid Link. Try Again.");
-    } else {
-      let shortURL = generateRandomString();
-      while (urlDatabase[shortURL]) {
-        shortURL = generateRandomString();
-      }
-      const time = new Date();
-      urlDatabase[shortURL] = {
-        id: shortURL,
-        longURL: input,
-        userID: req.session.userID,
-        visitors: [],
-        count: 0,
-        uniqueCount: 0,
-        timeCreated: time.toUTCString()
-      };
-      res.redirect(`urls/${shortURL}`);
-    }
-  }
-});
-
-app.delete("/urls/:shortURL", (req, res) => {
-  if (urlDatabase[req.params.shortURL].userID !== req.session.userID) {
-    renderError(res, 403, "Invalid Operation");
-  } else {
-    delete urlDatabase[req.params.shortURL];
-    res.redirect("/urls");
-  }
-});
-
-app.put("/urls/:shortURL", (req, res) => {
-  if (urlDatabase[req.params.shortURL].userID !== req.session.userID) {
-    renderError(res, 403, "You do not have access to edit this URL");
-  } else {
-    const input = encodeURL(req.body.editURL);
-    if (input === false) {
-      renderError(res, 400, "Invalid Link. Try Again.");
-    } else {
-      urlDatabase[req.params.shortURL].longURL = input;
-      res.redirect("/urls");
-    }
-  }
-});
-
 app.get("/register", (req, res) => {
   if (req.session.userID) {
     res.redirect("/urls");
@@ -137,32 +87,6 @@ app.get("/login", (req, res) => {
   }
 });
 
-app.get("/urls", (req, res) => {
-  const userURLS = urlsForUser(urlDatabase, req.session.userID);
-  res.templateVars.urls = userURLS;
-  res.templateVars.headTitle = "My URLs";
-  res.render("pages/urls_index", res.templateVars);
-});
-
-app.get("/urls/new", (req, res) => {
-  if (!userDatabase[req.session.userID]) {
-    res.redirect("/login");
-  } else {
-    res.templateVars.headTitle = "Add New URL";
-    res.render("pages/urls_new", res.templateVars);
-  }
-});
-
-app.get("/urls/:shortURL", (req, res) => {
-  if (urlDatabase[req.params.shortURL] === undefined) {
-    renderError(res, 404, "TinyURL not found. Check your address's spelling and try again.");
-  } else {
-    res.templateVars.shortURLObj = urlDatabase[req.params.shortURL];
-    res.templateVars.headTitle = `TinyURL of ${urlDatabase[req.params.shortURL].longURL}`;
-    res.render("pages/urls_show", res.templateVars);
-  }
-});
-
 app.get("/u/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL] === undefined) {
     renderError(res, 404, "Redirect not found. Check your address's spelling and try again.");
@@ -170,14 +94,6 @@ app.get("/u/:shortURL", (req, res) => {
     addAnalytic(urlDatabase, req, req.params.shortURL);
     res.redirect(urlDatabase[req.params.shortURL].longURL);
   }
-});
-
-app.get("/url", function(req, res) {
-  res.json(urlDatabase);
-});
-
-app.get("/users", function(req, res) {
-  res.json(userDatabase);
 });
 
 app.get("/", function(req, res) {
@@ -188,6 +104,7 @@ app.get("/", function(req, res) {
   }
 });
 
+// 404 error if accessing any other page
 app.use("/", (req, res, next) => {
   renderError(res, 404, "Page Does Not Exist");
 });
