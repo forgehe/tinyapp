@@ -4,6 +4,7 @@ const PORT = 8080; // default port 8080
 const cookieSession = require("cookie-session");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
+const methodOverride = require("method-override");
 const { secretKey, salt } = require("./secret.js");
 const { generateRandomString, checkEmail, urlsForUser, renderError, encodeURL } = require("./helpers.js");
 
@@ -13,11 +14,11 @@ app.use(
   cookieSession({
     name: "session",
     keys: [secretKey],
-
     // Cookie Options
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   })
 );
+app.use(methodOverride("_method"));
 
 const urlDatabase = {};
 
@@ -82,7 +83,7 @@ app.post("/urls", (req, res) => {
   }
 });
 
-app.post("/urls/:shortURL/delete", (req, res) => {
+app.delete("/urls/:shortURL", (req, res) => {
   const userID = req.session.userID;
   if (urlDatabase[req.params.shortURL].userID !== userID) {
     renderError(res, 403, "Invalid Operation");
@@ -92,7 +93,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   }
 });
 
-app.post("/urls/:shortURL", (req, res) => {
+app.put("/urls/:shortURL", (req, res) => {
   const userID = req.session.userID;
   if (urlDatabase[req.params.shortURL].userID !== userID) {
     renderError(res, 403, "You do not have access to edit this URL");
@@ -139,7 +140,7 @@ app.get("/urls", (req, res) => {
 
   const templateVars = {
     username: userDatabase[userID],
-    headTitle: "URL Index",
+    headTitle: "My URLs",
     urls: userURLS
   };
   res.render("pages/urls_index", templateVars);
