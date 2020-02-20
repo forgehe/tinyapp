@@ -12,6 +12,20 @@ const checkEmail = (database, obj) => {
   return found;
 };
 
+const encodeURL = string => {
+  let newString = string.trim();
+  if (!(newString.startsWith("http://") || newString.startsWith("https://"))) {
+    newString = "https://" + newString;
+  }
+  newString = encodeURI(newString);
+  // from: https://stackoverflow.com/a/3809435/6024104 (restrictive version)
+  // eslint-disable-next-line no-useless-escape
+  if (!newString.match(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g)) {
+    return false;
+  }
+  return newString;
+};
+
 const urlsForUser = (database, userID) => {
   let output = {};
   for (const objID in database) {
@@ -23,6 +37,23 @@ const urlsForUser = (database, userID) => {
     }
   }
   return output;
+};
+
+const addAnalytic = (database, req, shortURL) => {
+  const time = new Date();
+  if (!req.session.visitorID) {
+    req.session.visitorID = generateRandomString();
+  }
+  const visitor = {
+    id: req.session.visitorID,
+    time: time.toUTCString()
+  };
+  const newVisitor = database[shortURL].visitors.find(obj => obj.id === visitor.id);
+  database[shortURL].count += 1;
+  if (!newVisitor) {
+    database[shortURL].uniqueCount += 1;
+  }
+  database[shortURL].visitors.push(visitor);
 };
 
 const errorDatabase = {
@@ -75,18 +106,4 @@ const renderError = (res, errorCode, extraText) => {
   res.render("pages/error_page", templateErrors);
 };
 
-const encodeURL = string => {
-  let newString = string.trim();
-  if (!(newString.startsWith("http://") || newString.startsWith("https://"))) {
-    newString = "https://" + newString;
-  }
-  newString = encodeURI(newString);
-  // from: https://stackoverflow.com/a/3809435/6024104 (restrictive version)
-  // eslint-disable-next-line no-useless-escape
-  if (!newString.match(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g)) {
-    return false;
-  }
-  return newString;
-};
-
-module.exports = { generateRandomString, checkEmail, urlsForUser, renderError, encodeURL };
+module.exports = { generateRandomString, checkEmail, urlsForUser, renderError, encodeURL, addAnalytic };

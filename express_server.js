@@ -6,7 +6,7 @@ const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const methodOverride = require("method-override");
 const { secretKey, salt } = require("./secret.js");
-const { generateRandomString, checkEmail, urlsForUser, renderError, encodeURL } = require("./helpers.js");
+const { generateRandomString, checkEmail, urlsForUser, renderError, encodeURL, addAnalytic } = require("./helpers.js");
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -19,6 +19,14 @@ app.use(
   })
 );
 app.use(methodOverride("_method"));
+
+app.use((req, res, next) => {
+  let templateVars = {
+    username: userDatabase[req.session.userID]
+  };
+  res.templateVars = templateVars;
+  next();
+});
 
 const urlDatabase = {};
 
@@ -73,10 +81,15 @@ app.post("/urls", (req, res) => {
       while (urlDatabase[shortURL]) {
         shortURL = generateRandomString();
       }
-      const userID = req.session.userID;
+      const time = new Date();
       urlDatabase[shortURL] = {
+        id: shortURL,
         longURL: input,
-        userID: userID
+        userID: req.session.userID,
+        visitors: [],
+        count: 0,
+        uniqueCount: 0,
+        timeCreated: time.toUTCString()
       };
       res.redirect(`urls/${shortURL}`);
     }
@@ -84,8 +97,7 @@ app.post("/urls", (req, res) => {
 });
 
 app.delete("/urls/:shortURL", (req, res) => {
-  const userID = req.session.userID;
-  if (urlDatabase[req.params.shortURL].userID !== userID) {
+  if (urlDatabase[req.params.shortURL].userID !== req.session.userID) {
     renderError(res, 403, "Invalid Operation");
   } else {
     delete urlDatabase[req.params.shortURL];
@@ -94,8 +106,7 @@ app.delete("/urls/:shortURL", (req, res) => {
 });
 
 app.put("/urls/:shortURL", (req, res) => {
-  const userID = req.session.userID;
-  if (urlDatabase[req.params.shortURL].userID !== userID) {
+  if (urlDatabase[req.params.shortURL].userID !== req.session.userID) {
     renderError(res, 403, "You do not have access to edit this URL");
   } else {
     const input = encodeURL(req.body.editURL);
@@ -112,12 +123,8 @@ app.get("/register", (req, res) => {
   if (req.session.userID) {
     res.redirect("/urls");
   } else {
-    const userID = req.session.userID;
-    const templateVars = {
-      username: userDatabase[userID],
-      headTitle: "Register New User"
-    };
-    res.render("pages/register", templateVars);
+    res.templateVars.headTitle = "Register New User";
+    res.render("pages/register", res.templateVars);
   }
 });
 
@@ -125,52 +132,34 @@ app.get("/login", (req, res) => {
   if (req.session.userID) {
     res.redirect("/urls");
   } else {
-    const userID = req.session.userID;
-    const templateVars = {
-      username: userDatabase[userID],
-      headTitle: "Login Page"
-    };
-    res.render("pages/login", templateVars);
+    res.templateVars.headTitle = "Login Page";
+    res.render("pages/login", res.templateVars);
   }
 });
 
 app.get("/urls", (req, res) => {
-  const userID = req.session.userID;
-  const userURLS = urlsForUser(urlDatabase, userID);
-
-  const templateVars = {
-    username: userDatabase[userID],
-    headTitle: "My URLs",
-    urls: userURLS
-  };
-  res.render("pages/urls_index", templateVars);
+  const userURLS = urlsForUser(urlDatabase, req.session.userID);
+  res.templateVars.urls = userURLS;
+  res.templateVars.headTitle = "My URLs";
+  res.render("pages/urls_index", res.templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  const userID = req.session.userID;
-  if (!userDatabase[userID]) {
+  if (!userDatabase[req.session.userID]) {
     res.redirect("/login");
   } else {
-    const templateVars = {
-      username: userDatabase[userID],
-      headTitle: "Add New URL"
-    };
-    res.render("pages/urls_new", templateVars);
+    res.templateVars.headTitle = "Add New URL";
+    res.render("pages/urls_new", res.templateVars);
   }
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const userID = req.session.userID;
   if (urlDatabase[req.params.shortURL] === undefined) {
     renderError(res, 404, "TinyURL not found. Check your address's spelling and try again.");
   } else {
-    const templateVars = {
-      username: userDatabase[userID],
-      headTitle: `TinyURL of ${urlDatabase[req.params.shortURL].longURL}`,
-      shortURL: req.params.shortURL,
-      longURL: urlDatabase[req.params.shortURL].longURL
-    };
-    res.render("pages/urls_show", templateVars);
+    res.templateVars.shortURLObj = urlDatabase[req.params.shortURL];
+    res.templateVars.headTitle = `TinyURL of ${urlDatabase[req.params.shortURL].longURL}`;
+    res.render("pages/urls_show", res.templateVars);
   }
 });
 
@@ -178,8 +167,17 @@ app.get("/u/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL] === undefined) {
     renderError(res, 404, "Redirect not found. Check your address's spelling and try again.");
   } else {
+    addAnalytic(urlDatabase, req, req.params.shortURL);
     res.redirect(urlDatabase[req.params.shortURL].longURL);
   }
+});
+
+app.get("/url", function(req, res) {
+  res.json(urlDatabase);
+});
+
+app.get("/users", function(req, res) {
+  res.json(userDatabase);
 });
 
 app.get("/", function(req, res) {
@@ -188,6 +186,10 @@ app.get("/", function(req, res) {
   } else {
     res.redirect("/urls");
   }
+});
+
+app.use("/", (req, res, next) => {
+  renderError(res, 404, "Page Does Not Exist");
 });
 
 app.listen(PORT, () => {

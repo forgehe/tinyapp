@@ -10,10 +10,13 @@
       <div class="card text-center">
         <div class="card-header"></div>
         <div class="card-body">
-          <h5 class="card-title">TinyURL for: <%= longURL %></h5>
-          <p class="card-text">Short URL: <a href="/u/<%= shortURL %>"><%= shortURL %></a></p>
+          <h5 class="card-title">TinyURL for: <%= shortURLObj.longURL %></h5>
+          <p class="card-text">Time Created: <%= shortURLObj.timeCreated %></p>
+          <p class="card-text">Number of Visitor's: <%= shortURLObj.count %></p>
+          <p class="card-text">Number of Unique Visitor's: <%= shortURLObj.uniqueCount %></p>
+          <p class="card-text">Short URL: <a href="/u/<%= shortURLObj.id %>"><%= shortURLObj.id %></a></p>
           <p>
-            <form method="POST" action="/urls/<%=shortURL%>?_method=PUT">
+            <form method="POST" action="/urls/<%=shortURLObj.id%>?_method=PUT">
               <input type="text" name="editURL" placeholder="Enter New URL Here">
               <button type="submit" value="Submit">Submit</button>
             </form>
