@@ -29,10 +29,14 @@
       </style>
       <% if (username) { %>
       <div class="logged-in">
-        <h6 style="align-self: center; margin: auto;">Welcome Back <%= username.email %>!</h6>
-        <form method="POST" action="/logout">
-          <button class="btn btn-danger" type="submit" value="logout">Logout</button>
-        </form>
+        <div style="align-self: center; padding: 0 1em; text-align:right;">
+          <h6>Welcome Back <%= username.email %>!</h6>
+        </div>
+        <div>
+          <form method="POST" action="/logout">
+            <button class="btn btn-danger" type="submit" value="logout">Logout</button>
+          </form>
+        </div>
       </div>
       <% } else { %>
       <div class="login-form">

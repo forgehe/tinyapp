@@ -21,6 +21,25 @@
               <button type="submit" value="Submit">Submit</button>
             </form>
           </p>
+          <h6>Visitors:</h6>
+          <table class="table table-sm table-striped table-bordered">
+
+            <thead style="text-align: center;">
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Time Visited</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for (const value of shortURLObj.visitors) { %> 
+              <tr>
+                <td><%= value.id %></td>
+                <td><%= value.time %></td>
+              </tr>
+              <% } %> 
+            </tbody>
+          </table>
+          
         </div>
         <div class="card-footer text-muted"></div>
       </div>

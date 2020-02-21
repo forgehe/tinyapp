@@ -4,8 +4,8 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Final Product
 
-!["screenshot description"](https://github.com/forgehe/tinyapp/blob/master/docs/urls-page.png)  
-!["screenshot description"](https://github.com/forgehe/tinyapp/blob/master/docs/register-page.png)
+!["Main Page of URLs set by the user"](https://github.com/forgehe/tinyapp/blob/master/docs/urls-page.png)  
+!["URL page which provides modifying a specific TinyURL"](https://github.com/forgehe/tinyapp/blob/master/docs/url-page.png) !["Registration Page"](https://github.com/forgehe/tinyapp/blob/master/docs/register-page.png)
 
 ## Dependencies
 

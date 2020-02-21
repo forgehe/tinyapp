@@ -21,11 +21,15 @@
         </thead>
         <% if(Object.entries(urls).length === 0 && urls.constructor === Object) { %>
         <tbody>
-          <div>
-            <h1>
-              No URLS Found. Try Logging in, or add a new URL.
-            </h1>
-          </div>
+          <tr>
+            <td>
+              <div>
+                <h5>
+                  No URLS Found. Try Logging in, or add a new URL.
+                </h5>
+              </div>
+            </td>
+          </tr>
         </tbody>
         <% } else { %>
         <tbody>
