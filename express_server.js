@@ -48,7 +48,7 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  req.session.userID = null;
+  req.session = null;
   res.redirect("/urls");
 });
 
