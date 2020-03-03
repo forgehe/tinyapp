@@ -98,9 +98,9 @@ app.get("/u/:shortURL", (req, res) => {
 
 app.get("/", function(req, res) {
   if (!req.session.userID) {
-    res.redirect("../login");
+    res.redirect("login");
   } else {
-    res.redirect("../urls");
+    res.redirect("urls");
   }
 });
 
