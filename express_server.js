@@ -42,14 +42,14 @@ app.post("/login", (req, res) => {
       renderError(res, 403, "Invalid Username or Password");
     } else {
       req.session.userID = user.id;
-      res.redirect("/urls");
+      res.redirect("../urls");
     }
   }
 });
 
 app.post("/logout", (req, res) => {
   req.session = null;
-  res.redirect("/urls");
+  res.redirect("../urls");
 });
 
 app.post("/register", (req, res) => {
@@ -65,7 +65,7 @@ app.post("/register", (req, res) => {
       password: password
     };
     req.session.userID = ranString;
-    res.redirect("/urls");
+    res.redirect("../urls");
   }
 });
 
@@ -80,7 +80,7 @@ app.get("/register", (req, res) => {
 
 app.get("/login", (req, res) => {
   if (req.session.userID) {
-    res.redirect("/urls");
+    res.redirect("../urls");
   } else {
     res.templateVars.headTitle = "Login Page";
     res.render("pages/login", res.templateVars);
@@ -98,9 +98,9 @@ app.get("/u/:shortURL", (req, res) => {
 
 app.get("/", function(req, res) {
   if (!req.session.userID) {
-    res.redirect("/login");
+    res.redirect("../login");
   } else {
-    res.redirect("/urls");
+    res.redirect("../urls");
   }
 });
 

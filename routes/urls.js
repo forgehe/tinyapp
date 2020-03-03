@@ -4,14 +4,16 @@ const { generateRandomString, urlsForUser, renderError, encodeURL } = require(".
 const { urlDatabase, userDatabase } = require("../database.js");
 
 module.exports = function() {
+  // POST request to create a new shortURL
   router.post("/", (req, res) => {
     if (!req.session.userID) {
       renderError(res, 403, "Please Login First Before Creating an URL.");
     } else {
       const input = encodeURL(req.body.longURL);
-      if (input === false) {
+      if (!input) {
         renderError(res, 400, "Invalid Link. Try Again.");
       } else {
+        // checks if randomURL was already generated before, and regenerates a new one if needed
         let shortURL = generateRandomString();
         while (urlDatabase[shortURL]) {
           shortURL = generateRandomString();
@@ -26,20 +28,22 @@ module.exports = function() {
           uniqueCount: 0,
           timeCreated: time.toUTCString()
         };
-        res.redirect(`/urls/${shortURL}`);
+        res.redirect(`../urls/${shortURL}`);
       }
     }
   });
 
+  // DELETE shortURL from /urls
   router.delete("/:shortURL", (req, res) => {
     if (urlDatabase[req.params.shortURL].userID !== req.session.userID) {
       renderError(res, 403, "Invalid Operation");
     } else {
       delete urlDatabase[req.params.shortURL];
-      res.redirect("/urls");
+      res.redirect("../urls");
     }
   });
 
+  // PUT shortURL from :shortURL page
   router.put("/:shortURL", (req, res) => {
     if (urlDatabase[req.params.shortURL].userID !== req.session.userID) {
       renderError(res, 403, "You do not have access to edit this URL");
@@ -49,7 +53,7 @@ module.exports = function() {
         renderError(res, 400, "Invalid Link. Try Again.");
       } else {
         urlDatabase[req.params.shortURL].longURL = input;
-        res.redirect("/urls");
+        res.redirect("../urls");
       }
     }
   });
